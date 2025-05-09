@@ -1,7 +1,12 @@
 /* You can add global styles to this file, and also import other style files */
 @use '@angular/material' as mat;
+@use '@nebular/theme/styles/theming' as *;
+@use '@nebular/theme/styles/themes/default' as *;
 
 @include mat.core();
+@include nb-install() {
+  @include nb-theme-global();
+}
 
 $primary-palette: (
   50: #e3f2fd,
@@ -158,4 +163,8 @@ html, body {
   color: #4caf50;
   font-size: 0.875rem;
   margin-top: 4px;
-} 
+}
+
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+@import '@nebular/theme/styles/theming';
+@import '@nebular/theme/styles/themes/default'; 
