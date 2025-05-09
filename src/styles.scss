@@ -1,0 +1,161 @@
+/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$primary-palette: (
+  50: #e3f2fd,
+  100: #bbdefb,
+  200: #90caf9,
+  300: #64b5f6,
+  400: #42a5f5,
+  500: #2196f3,
+  600: #1e88e5,
+  700: #1976d2,
+  800: #1565c0,
+  900: #0d47a1,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: rgba(black, 0.87),
+    400: rgba(black, 0.87),
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+  )
+);
+
+$accent-palette: (
+  50: #fce4ec,
+  100: #f8bbd0,
+  200: #f48fb1,
+  300: #f06292,
+  400: #ec407a,
+  500: #e91e63,
+  600: #d81b60,
+  700: #c2185b,
+  800: #ad1457,
+  900: #880e4f,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: rgba(black, 0.87),
+    400: white,
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+  )
+);
+
+$theme-primary: mat.define-palette($primary-palette);
+$theme-accent: mat.define-palette($accent-palette);
+$theme-warn: mat.define-palette(mat.$red-palette);
+
+$theme: mat.define-light-theme((
+  color: (
+    primary: $theme-primary,
+    accent: $theme-accent,
+    warn: $theme-warn,
+  ),
+  typography: mat.define-typography-config(),
+  density: 0,
+));
+
+@include mat.all-component-themes($theme);
+
+/* Estilos globales */
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: #f5f5f5;
+}
+
+.mat-mdc-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.mat-mdc-table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mat-mdc-header-cell {
+  background-color: #fafafa;
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: 500;
+}
+
+.mat-mdc-row:hover {
+  background-color: #f5f5f5;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-button.mat-primary {
+  background-color: #1976d2;
+}
+
+.mat-mdc-raised-button.mat-primary {
+  background-color: #1976d2;
+}
+
+/* Estilos para el layout de administración */
+.admin-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.admin-content {
+  padding: 24px;
+  background-color: #f5f5f5;
+}
+
+/* Estilos para las tarjetas de dashboard */
+.dashboard-card {
+  margin-bottom: 24px;
+}
+
+.dashboard-card-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.87);
+  margin-bottom: 16px;
+}
+
+/* Estilos para los botones de acción */
+.action-button {
+  margin-right: 8px;
+}
+
+/* Estilos para los formularios */
+.form-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Estilos para los mensajes de error */
+.error-message {
+  color: #f44336;
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+
+/* Estilos para los mensajes de éxito */
+.success-message {
+  color: #4caf50;
+  font-size: 0.875rem;
+  margin-top: 4px;
+} 
