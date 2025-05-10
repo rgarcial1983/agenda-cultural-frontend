@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Router } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 
 interface AuthResponse {
   token: string;
@@ -12,26 +14,56 @@ interface AuthResponse {
 })
 export class AuthService {
   private apiUrl = `${environment.apiUrl}/auth`;
+  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private usernameSubject = new BehaviorSubject<string>('');
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {
+    if (this.isBrowser()) {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        this.isAuthenticatedSubject.next(true);
+        this.usernameSubject.next(user.username);
+      }
+    }
+  }
 
-  login(credentials: { username: string; password: string }): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials).pipe(
-      tap(response => {
-        localStorage.setItem('token', response.token);
-      })
-    );
+  isBrowser(): boolean {
+    return typeof window !== 'undefined' && !!window.localStorage;
+  }
+
+  login(username: string, password: string): boolean {
+    if (this.isBrowser() && username && password) {
+      const user = { username };
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      this.isAuthenticatedSubject.next(true);
+      this.usernameSubject.next(username);
+      return true;
+    }
+    return false;
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    if (this.isBrowser()) {
+      localStorage.removeItem('currentUser');
+    }
+    this.isAuthenticatedSubject.next(false);
+    this.usernameSubject.next('');
+    this.router.navigate(['/auth/login']);
   }
 
-  isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+  isAuthenticated(): Observable<boolean> {
+    return this.isAuthenticatedSubject.asObservable();
+  }
+
+  getUsername(): string {
+    return this.usernameSubject.value;
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    if (this.isBrowser()) {
+      return localStorage.getItem('token');
+    }
+    return null;
   }
 } 

@@ -11,6 +11,8 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
+import Swal from 'sweetalert2';
+import { EventosService, Evento } from '../../../../eventos/eventos.service';
 
 @Component({
   selector: 'app-eventos-list',
@@ -28,6 +30,7 @@ import { MatChipsModule } from '@angular/material/chips';
     MatFormFieldModule,
     MatChipsModule
   ],
+  providers: [EventosService],
   template: `
     <div class="container">
       <div class="header">
@@ -149,53 +152,65 @@ import { MatChipsModule } from '@angular/material/chips';
   `]
 })
 export class EventosListComponent implements OnInit {
-  eventos = [
-    {
-      id: 1,
-      titulo: 'Concierto de Música Clásica',
-      fecha: new Date('2024-03-15'),
-      lugar: 'Teatro Principal',
-      ciudad: 'Zaragoza',
-      categorias: ['Concierto', 'Música Sacra']
-    },
-    {
-      id: 2,
-      titulo: 'Taller de Cerámica',
-      fecha: new Date('2024-03-20'),
-      lugar: 'Centro Cultural',
-      ciudad: 'Huesca',
-      categorias: ['Taller', 'Artesanía']
-    }
-  ];
-
+  eventos: Evento[] = [];
   columnas = ['titulo', 'fecha', 'lugar', 'ciudad', 'categorias', 'acciones'];
   filtro = '';
-  dataSource = new MatTableDataSource<any>(this.eventos);
+  dataSource = new MatTableDataSource<Evento>([]);
   @ViewChild(MatSort) sort!: MatSort;
 
+  constructor(private eventosService: EventosService) {}
+
   ngOnInit(): void {
-    this.dataSource = new MatTableDataSource(this.eventos);
-    this.dataSource.sort = this.sort;
-    this.dataSource.filterPredicate = (data: any, filter: string) => {
-      const dataStr = Object.values(data).reduce((acc: string, value: unknown) => {
-        if (Array.isArray(value)) {
-          return acc + ' ' + value.join(' ');
-        }
-        if (value instanceof Date) {
-          return acc + ' ' + value.toLocaleDateString('es-ES');
-        }
-        return acc + ' ' + String(value);
-      }, '').toLowerCase();
-      return dataStr.includes(filter.toLowerCase());
-    };
+    this.cargarEventos();
+  }
+
+  cargarEventos() {
+    this.eventosService.getEventos().subscribe((resp: any) => {
+      const eventos = Array.isArray(resp) ? resp : (Array.isArray(resp.content) ? resp.content : []);
+      this.eventos = eventos.map((e: Evento) => ({
+        ...e,
+        categorias: Array.isArray(e.categorias)
+          ? e.categorias.map((cat: any) => typeof cat === 'string' ? cat : cat.nombre)
+          : []
+      }));
+      this.dataSource = new MatTableDataSource(this.eventos);
+      this.dataSource.sort = this.sort;
+      this.dataSource.filterPredicate = (data: any, filter: string) => {
+        const dataStr = Object.values(data).reduce((acc: string, value: unknown) => {
+          if (Array.isArray(value)) {
+            return acc + ' ' + value.join(' ');
+          }
+          if (value instanceof Date) {
+            return acc + ' ' + value.toLocaleDateString('es-ES');
+          }
+          return acc + ' ' + String(value);
+        }, '').toLowerCase();
+        return dataStr.includes(filter.toLowerCase());
+      };
+    });
   }
 
   aplicarFiltro() {
     this.dataSource.filter = this.filtro.trim().toLowerCase();
   }
 
-  eliminarEvento(evento: any) {
-    // Aquí iría la lógica para eliminar el evento
-    console.log('Eliminar evento:', evento);
+  eliminarEvento(evento: Evento) {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Deseas eliminar el evento "${evento.titulo}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.eventosService.eliminarEvento(evento.id).subscribe(() => {
+          Swal.fire('¡Eliminado!', 'El evento ha sido eliminado correctamente.', 'success');
+          this.cargarEventos();
+        });
+      }
+    });
   }
 } 

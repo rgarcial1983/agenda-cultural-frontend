@@ -6,9 +6,11 @@ import { CategoriasListComponent } from './features/categorias/pages/categorias-
 import { CategoriasFormComponent } from './features/categorias/pages/categorias-form/categorias-form.component';
 import { EventosListComponent } from './features/dashboard/pages/eventos/eventos-list/eventos-list.component';
 import { EventosFormComponent } from './features/dashboard/pages/eventos/eventos-form/eventos-form.component';
+import { EventosPublicListComponent } from './features/eventos/eventos-public-list/eventos-public-list.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'eventos', component: EventosPublicListComponent },
   {
     path: 'admin',
     component: AdminLayoutComponent,

@@ -8,6 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
+import Swal from 'sweetalert2';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -162,7 +164,7 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private snackBar: MatSnackBar
+    private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -173,16 +175,14 @@ export class LoginComponent {
   onSubmit(): void {
     if (this.loginForm.valid) {
       this.isLoading = true;
-      // Dummy login: usuario admin, password admin
       const { username, password } = this.loginForm.value;
       setTimeout(() => {
         this.isLoading = false;
-        if (username === 'admin' && password === 'admin') {
-          // Guardar estado de login (dummy)
-          localStorage.setItem('isLoggedIn', 'true');
+        const success = this.authService.login(username, password);
+        if (success) {
           this.router.navigate(['/admin/dashboard']);
         } else {
-          this.snackBar.open('Usuario o contraseña incorrectos', 'Cerrar', { duration: 3000 });
+          Swal.fire('Error', 'Usuario o contraseña incorrectos', 'error');
         }
       }, 800);
     }

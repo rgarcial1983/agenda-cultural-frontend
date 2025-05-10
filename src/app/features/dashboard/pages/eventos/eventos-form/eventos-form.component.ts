@@ -9,7 +9,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import Swal from 'sweetalert2';
+import { EventosService, Evento } from '../../../../eventos/eventos.service';
 
 @Component({
   selector: 'app-eventos-form',
@@ -27,6 +29,7 @@ import { RouterModule } from '@angular/router';
     MatSelectModule,
     RouterModule
   ],
+  providers: [EventosService],
   template: `
     <div class="form-container">
       <mat-card>
@@ -128,6 +131,7 @@ import { RouterModule } from '@angular/router';
 export class EventosFormComponent implements OnInit {
   eventoForm: FormGroup;
   isEdit = false;
+  eventoId: number | null = null;
   categorias = [
     { nombre: 'Concierto' },
     { nombre: 'Taller' },
@@ -139,7 +143,12 @@ export class EventosFormComponent implements OnInit {
     { nombre: 'Visita Guiada' }
   ];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private route: ActivatedRoute,
+    private router: Router,
+    private eventosService: EventosService
+  ) {
     this.eventoForm = this.fb.group({
       titulo: ['', Validators.required],
       descripcion: [''],
@@ -151,13 +160,46 @@ export class EventosFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Aquí iría la lógica para cargar los datos si estamos editando
+    this.eventoId = this.route.snapshot.params['id'] ? +this.route.snapshot.params['id'] : null;
+    this.isEdit = !!this.eventoId;
+    if (this.isEdit && this.eventoId) {
+      this.eventosService.getEvento(this.eventoId).subscribe((evento: Evento) => {
+        this.eventoForm.patchValue({
+          ...evento,
+          fecha: new Date(evento.fecha)
+        });
+      });
+    }
   }
 
   onSubmit(): void {
     if (this.eventoForm.valid) {
-      console.log(this.eventoForm.value);
-      // Aquí iría la lógica para guardar los datos
+      const formValue = this.eventoForm.value;
+      const eventoPayload = {
+        ...formValue,
+        fecha: formValue.fecha instanceof Date ? formValue.fecha.toISOString().split('T')[0] : formValue.fecha
+      };
+      if (this.isEdit && this.eventoId) {
+        this.eventosService.actualizarEvento(this.eventoId, eventoPayload).subscribe({
+          next: () => {
+            Swal.fire('Actualizado', 'El evento ha sido actualizado correctamente.', 'success');
+            this.router.navigate(['/admin/eventos']);
+          },
+          error: () => {
+            Swal.fire('Error', 'No se pudo actualizar el evento.', 'error');
+          }
+        });
+      } else {
+        this.eventosService.crearEvento(eventoPayload).subscribe({
+          next: () => {
+            Swal.fire('Creado', 'El evento ha sido creado correctamente.', 'success');
+            this.router.navigate(['/admin/eventos']);
+          },
+          error: () => {
+            Swal.fire('Error', 'No se pudo crear el evento.', 'error');
+          }
+        });
+      }
     }
   }
 } 
