@@ -167,8 +167,9 @@ export class EventosListComponent implements OnInit {
   cargarEventos() {
     this.eventosService.getEventos().subscribe((resp: any) => {
       const eventos = Array.isArray(resp) ? resp : (Array.isArray(resp.content) ? resp.content : []);
-      this.eventos = eventos.map((e: Evento) => ({
+      this.eventos = eventos.map((e: any) => ({
         ...e,
+        ciudad: e.localizacion?.lugar || '',
         categorias: Array.isArray(e.categorias)
           ? e.categorias.map((cat: any) => typeof cat === 'string' ? cat : cat.nombre)
           : []

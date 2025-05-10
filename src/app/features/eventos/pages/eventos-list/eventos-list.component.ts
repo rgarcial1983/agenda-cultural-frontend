@@ -105,7 +105,7 @@ export const MY_FORMATS = {
             </p>
             <p class="lugar">
               <mat-icon class="evento-icon">location_on</mat-icon>
-              {{evento.lugar}}, {{evento.ciudad}}
+              {{evento.lugar}} {{evento.ciudad}}
             </p>
             <p class="descripcion">{{evento.descripcion}}</p>
             <div class="categorias">

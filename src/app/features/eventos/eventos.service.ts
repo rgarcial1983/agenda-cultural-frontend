@@ -7,8 +7,10 @@ export interface Evento {
   titulo: string;
   descripcion: string;
   fecha: string;
+  hora: string;
   lugar: string;
   ciudad: string;
+  imagenurl: string;
   categorias: string[];
 }
 
