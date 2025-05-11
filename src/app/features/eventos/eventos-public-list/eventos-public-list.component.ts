@@ -2,26 +2,62 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button'; // Asegúrate de que esté importado
+import { MatButtonModule } from '@angular/material/button';
 import { EventosService, Evento } from '../eventos.service';
-import { Router } from '@angular/router'; // Importa Router si usas la navegación al hacer clic
+import { Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
+import { MatSelectModule } from '@angular/material/select';
+import { ReactiveFormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { FormsModule } from '@angular/forms';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
+import { DateAdapter, MAT_DATE_FORMATS, MAT_NATIVE_DATE_FORMATS } from '@angular/material/core';
+import localeEs from '@angular/common/locales/es';
+import { registerLocaleData } from '@angular/common'; // Para registrar locale si es necesario aquí
+
+
+// Definir el formato de fecha dd/MM/yyyy
+export const DD_MM_YYYY_Format = {
+ parse: {
+  dateInput: 'dd/MM/yyyy', // Corregido a minúsculas
+ },
+ display: {
+  dateInput: 'dd/MM/yyyy', // Correcto
+  monthYearLabel: 'MMMM yyyy', // Mejorado para mostrar año
+  dateA11yLabel: 'dd/MM/yyyy', // Ajustado para consistencia
+  monthYearA11yLabel: 'MMMM yyyy', // Mejorado
+ },
+};
 
 @Component({
-  selector: 'app-eventos-public-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatToolbarModule,
-    MatSidenavModule,
-    MatListModule
-  ],
-  providers: [EventosService],
+ selector: 'app-eventos-public-list',
+ standalone: true,
+ imports: [
+  CommonModule,
+  MatCardModule,
+  MatIconModule,
+  MatButtonModule,
+  MatToolbarModule,
+  MatSidenavModule,
+  MatListModule,
+  MatSelectModule,
+  ReactiveFormsModule,
+  MatFormFieldModule,
+  MatInputModule,
+  MatDatepickerModule,
+  MatNativeDateModule, // Necesitas MatNativeDateModule para usar MAT_DATE_FORMATS con fechas nativas
+  FormsModule
+ ],
+ providers: [
+  EventosService,
+  { provide: MAT_DATE_LOCALE, useValue: 'es-ES' },
+  { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_Format }
+ ],
   template: `
     <mat-sidenav-container class="sidenav-container">
       <mat-sidenav #drawer mode="over" class="sidenav">
@@ -38,13 +74,47 @@ import { MatListModule } from '@angular/material/list';
           <button mat-icon-button (click)="drawer.toggle()" class="menu-button">
             <mat-icon>menu</mat-icon>
           </button>
+
           <img src="assets/images/logo.png" alt="Logo" class="app-logo" />
           <span class="app-title">Agenda Cultural</span>
+
+          <span class="spacer"></span> <!-- Empuja el siguiente contenido a la derecha -->
+        
         </mat-toolbar>
+
+        <!-- Filtros -->
+        <div class="filtros-container">
+          <mat-form-field appearance="fill">
+            <mat-label>Ciudad</mat-label>
+            <mat-select [(value)]="filtroCiudad">
+              <mat-option value="">Todas</mat-option>
+              <mat-option *ngFor="let ciudad of ciudades" [value]="ciudad">{{ ciudad }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Categorías</mat-label>
+            <mat-select [(value)]="filtroCategoria" multiple>
+              <mat-option value="">Todas</mat-option>
+              <mat-option *ngFor="let cat of todasCategorias" [value]="cat">{{ cat }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Fecha</mat-label>
+            <input matInput [matDatepicker]="picker" [(ngModel)]="filtroFecha">
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+
+          <button mat-raised-button color="primary" (click)="aplicarFiltros()">Filtrar</button>
+          <button mat-raised-button (click)="resetFiltros()">Limpiar</button>
+        </div>
+
 
         <!-- Tu contenido existente aquí -->
         <div class="public-eventos-container">
-          <h1>Agenda de Eventos</h1>
+          
 
           <div *ngIf="eventos.length === 0 && !loading" class="no-eventos-message">
             <mat-icon>info</mat-icon> No hay eventos próximos en este momento. Vuelve a consultar más tarde.
@@ -56,7 +126,7 @@ import { MatListModule } from '@angular/material/list';
 
           <div class="eventos-grid">
             <mat-card
-              *ngFor="let evento of eventos"
+              *ngFor="let evento of eventosFiltrados"
               class="evento-card"
               [class.evento-finalizado]="esEventoFinalizado(evento.fecha)" >
               <img *ngIf="evento.imagenurl" mat-card-image [src]="evento.imagenurl" alt="Imagen del evento {{ evento.titulo }}">
@@ -121,7 +191,7 @@ import { MatListModule } from '@angular/material/list';
     }
 
     .app-title {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       font-weight: 600;
       color: white;
     }
@@ -184,8 +254,7 @@ import { MatListModule } from '@angular/material/list';
     .evento-card {
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Sombra un poco más pronunciada */
-      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Añadir transición para hover */
-      cursor: pointer; /* Indicar que la card es interactiva (si añades click) */
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Añadir transición para hover */      
       position: relative; /* Necesario para posicionar el ::before/::after */
       overflow: hidden; /* Asegura que el contenido superpuesto no se salga de la card */
       display: flex; /* Usar flexbox para organizar el contenido verticalmente */
@@ -204,20 +273,18 @@ import { MatListModule } from '@angular/material/list';
        width: 100%; /* Ocupa todo el ancho disponible */
     }
     /* FIN ESTILO IMAGEN */
-
-
-    mat-card-header .mat-card-title {
+    .mat-card-header .mat-card-title {
        font-size: 1.25em; /* Ajustar tamaño del título de la card */
        font-weight: 600;
     }
-    mat-card-header .mat-card-subtitle {
+    .mat-card-header .mat-card-subtitle {
        font-size: 0.9em; /* Ajustar tamaño del subtítulo (fecha) */
        color: #555;
        display: flex; /* Usar flexbox para alinear icono y texto */
        align-items: center;
     }
      /* ESTILO PARA ICONOS NORMALES EN EL SUBTÍTULO (tamaño por defecto si no tienen .icon-large) */
-    mat-card-subtitle mat-icon {
+    .mat-card-subtitle .mat-icon {
         /* Estos estilos se aplican a mat-icon dentro de mat-card-subtitle */
         font-size: 18px;
         margin-right: 4px;
@@ -225,17 +292,17 @@ import { MatListModule } from '@angular/material/list';
         width: 18px;
         vertical-align: middle; /* Para alineación */
     }
-    mat-card-content {
+    .mat-card-content {
         /* Permite que el contenido ocupe el espacio disponible, empujando las acciones abajo */
         flex-grow: 1;
         /* padding-bottom: 0 !important; /* Opcional: quitar el padding inferior por defecto si lo manejas en mat-card-actions */
     }
-    mat-card-content p {
+    .mat-card-content p {
        margin-bottom: 10px; /* Espacio entre párrafos */
        line-height: 1.5; /* Interlineado para mejor lectura */
     }
     /* ESTILO PARA ICONOS NORMALES EN EL CONTENIDO (tamaño por defecto si no tienen .icon-large) */
-     mat-card-content mat-icon {
+    .mat-card-content .mat-icon {
         /* Estos estilos se aplican a mat-icon dentro de mat-card-content */
         font-size: 18px;
         margin-right: 4px;
@@ -293,12 +360,12 @@ import { MatListModule } from '@angular/material/list';
 
 
    /* Estilo para acciones (botones) si los añades */
-   mat-card-actions {
+   .mat-card-actions {
        padding: 0 5px 0px 5px; /* Padding inferior y lateral - Ajusta a 16px */
    }
 
    /* Estilo para centrar acciones en la card */
-   mat-card-actions.center-button {
+   .mat-card-actions.center-button {
        display: flex; /* mat-card-actions ya suele ser un flex container */
        justify-content: center; /* Centra horizontalmente su contenido (el botón) */
        align-items: center; /* Centra verticalmente si fuera necesario */
@@ -357,15 +424,53 @@ import { MatListModule } from '@angular/material/list';
         align-items: center; /* Alinea verticalmente los elementos hijos (icono y texto) al centro */        
         margin-right: 16px; /* Opcional: Añade espacio entre el bloque de fecha y el de hora */
     }
+
+    .spacer {
+      flex: 1 1 auto;
+    }
+
+    .ciudad-select {
+      min-width: 140px;
+      max-width: 200px;
+      margin-right: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .ciudad-select {
+        min-width: 100px;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Filtros */
+    .filtros-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+
+    .filtro-container mat-form-field {
+      min-width: 200px;
+      flex: 1;
+    }
+
+
    `
   ]
 })
-export class EventosPublicListComponent implements OnInit {
-  eventos: Evento[] = [];
-  loading: boolean = true; // Añadir estado de carga
 
-  // Mapa de colores para categorías (puedes expandirlo con más categorías y colores)
-  private categoryColors: { [key: string]: { background: string, color: string } } = {
+
+export class EventosPublicListComponent implements OnInit {
+   eventos: Evento[] = [];
+   loading: boolean = true; // Añadir estado de carga
+  
+   // Mapa de colores para categorías (puedes expandirlo con más categorías y colores)
+   private categoryColors: { [key: string]: { background: string, color: string } } = {
     'Música': { background: '#007bff', color: '#fff' }, // Estilo Bootstrap Primary
     'Teatro': { background: '#dc3545', color: '#fff' }, // Estilo Bootstrap Danger
     'Arte': { background: '#ffc107', color: '#212529' }, // Estilo Bootstrap Warning (texto oscuro)
@@ -375,96 +480,139 @@ export class EventosPublicListComponent implements OnInit {
     'Cine': { background: '#f8f9fa', color: '#212529' }, // Estilo Bootstrap Light (texto oscuro)
     'Gastronomía': { background: '#343a40', color: '#fff' }, // Estilo Bootstrap Dark
     // Añade más mapeos según las categorías que manejes
-  };
-
-
-  constructor(
+   };
+  
+   // Propiedades para filtros
+   filtroCiudad: string = '';
+   filtroCategoria: string[] = [];
+   filtroFecha: Date | null = null;
+   eventosFiltrados: Evento[] = [];
+  
+    // Asegúrate de que estas propiedades estén definidas si las usas en el template/lógica de filtrado
+    ciudades: string[] = ['Úbeda', 'Baeza']; // Ejemplo, obtén esto de tu API si es dinámico
+    todasCategorias: string[] = []; // Se rellena al cargar eventos
+  
+  
+   constructor(
     private eventosService: EventosService,
     // private router: Router // Descomenta si usas la navegación al hacer clic
-  ) {}
-
-  ngOnInit(): void {
+   ) {
+        // Opcional: Registrar el locale aquí si no está registrado globalmente
+        // registerLocaleData(localeEs);
+    }
+  
+   ngOnInit(): void {
     this.loading = true; // Iniciar carga
     this.eventosService.getEventos().subscribe({
-      next: (resp: any) => {
-        const eventos = Array.isArray(resp) ? resp : (Array.isArray(resp.content) ? resp.content : []);
-        this.eventos = eventos.map((e: any) => ({
-          ...e,
-          // Asegúrate de que 'fecha' sea un string parseable por new Date() o un objeto Date
-          // Si la API devuelve la fecha en otro formato, conviértela aquí.
-          // Ejemplo si la API devuelve un timestamp: fecha: new Date(e.fechaTimestamp * 1000)
-          lugar: e.localizacion?.lugar || '',
-          ciudad: e.ciudad?.nombre || '',
-          categorias: Array.isArray(e.categorias)
-            ? e.categorias.map((cat: any) => typeof cat === 'string' ? cat : cat.nombre)
-            : []
-          // imagenurl: e.imagenUrl || e.imagenurl // Puedes mantenerlo si necesitas esta lógica
-        }));
-        // Opcional: Ordenar los eventos por fecha después de recibirlos
-        this.eventos = this.eventos.sort((a, b) => {
-            const dateA = new Date(a.fecha).getTime();
-            const dateB = new Date(b.fecha).getTime();
-            return dateA - dateB; // Orden ascendente por fecha
-        });
-        this.loading = false; // Finalizar carga
-      },
-      error: (err) => {
-        console.error('Error al obtener eventos:', err);
-        this.loading = false; // Finalizar carga incluso en error
-        // Opcional: mostrar un mensaje de error al usuario
-      }
+     next: (resp: any) => {
+      const eventos = Array.isArray(resp) ? resp : (Array.isArray(resp.content) ? resp.content : []);
+      this.eventos = eventos.map((e: any) => ({
+       ...e,
+       // Asegúrate de que 'fecha' sea un string parseable por new Date() o un objeto Date
+       // Si la API devuelve la fecha en otro formato, conviértela aquí.
+       // Ejemplo si la API devuelve un timestamp: fecha: new Date(e.fechaTimestamp * 1000)
+       lugar: e.localizacion?.lugar || '',
+       ciudad: e.ciudad?.nombre || '',
+       categorias: Array.isArray(e.categorias)
+        ? e.categorias.map((cat: any) => typeof cat === 'string' ? cat : cat.nombre)
+        : []
+       // imagenurl: e.imagenUrl || e.imagenurl // Puedes mantenerlo si necesitas esta lógica
+      }));
+      // Opcional: Ordenar los eventos por fecha después de recibirlos
+      this.eventos = this.eventos.sort((a, b) => {
+        const dateA = new Date(a.fecha).getTime();
+        const dateB = new Date(b.fecha).getTime();
+        return dateA - dateB; // Orden ascendente por fecha
+      });
+  
+      // Rellenar todasCategorias al cargar los eventos
+      this.todasCategorias = Array.from(
+       new Set(this.eventos.flatMap(e => e.categorias))
+      ).sort();
+  
+      this.eventosFiltrados = [...this.eventos]; // Inicializar eventosFiltrados
+      this.loading = false; // Finalizar carga
+     },
+     error: (err) => {
+      console.error('Error al obtener eventos:', err);
+      this.loading = false; // Finalizar carga incluso en error
+      // Opcional: mostrar un mensaje de error al usuario
+     }
     });
-  }
-
-  /**
+   }
+  
+   /**
    * Determina si la fecha de un evento ya ha pasado.
    * @param fecha La fecha del evento en formato string o Date.
    * @returns True si el evento ya ha pasado, false en caso contrario.
    */
-  esEventoFinalizado(fecha: string | Date): boolean {
+   esEventoFinalizado(fecha: string | Date): boolean {
     if (!fecha) {
-      return false; // Si no hay fecha, no se considera finalizado
+     return false; // Si no hay fecha, no se considera finalizado
     }
     try {
-        const fechaEvento = new Date(fecha);
-        const hoy = new Date();
-        // Para comparar solo por día, poner la hora de hoy a medianoche
-        hoy.setHours(0, 0, 0, 0);
-        // Comparamos la fecha del evento (también puesta a medianoche si es Date)
-         if (fechaEvento instanceof Date && !isNaN(fechaEvento.getTime())) {
-             fechaEvento.setHours(0, 0, 0, 0);
-             return fechaEvento < hoy;
-         } else if (typeof fecha === 'string') {
-             // Intentar parsear el string. Depende del formato de la API.
-             // Si el formato no es estándar (YYYY-MM-DD), podrías necesitar una librería como date-fns o moment.js
-             const parsedDate = new Date(fecha);
-             if (!isNaN(parsedDate.getTime())) {
-                 parsedDate.setHours(0, 0, 0, 0);
-                 return parsedDate < hoy;
-             }
-         }
-        return false; // Si no se pudo parsear la fecha, no se considera finalizado
+      const fechaEvento = new Date(fecha);
+      const hoy = new Date();
+      // Para comparar solo por día, poner la hora de hoy a medianoche
+      hoy.setHours(0, 0, 0, 0);
+      // Comparamos la fecha del evento (también puesta a medianoche si es Date)
+      if (fechaEvento instanceof Date && !isNaN(fechaEvento.getTime())) {
+        fechaEvento.setHours(0, 0, 0, 0);
+        return fechaEvento < hoy;
+      } else if (typeof fecha === 'string') {
+        // Intentar parsear el string. Depende del formato de la API.
+        // Si el formato no es estándar (YYYY-MM-DD), podrías necesitar una librería como date-fns o moment.js
+        const parsedDate = new Date(fecha);
+        if (!isNaN(parsedDate.getTime())) {
+          parsedDate.setHours(0, 0, 0, 0);
+          return parsedDate < hoy;
+        }
+      }
+      return false; // Si no se pudo parsear la fecha, no se considera finalizado
     } catch (e) {
-        console.error("Error parseando fecha:", fecha, e);
-        return false; // En caso de error al parsear, no se considera finalizado
+      console.error("Error parseando fecha:", fecha, e);
+      return false; // En caso de error al parsear, no se considera finalizado
     }
-  }
-
-  /**
+   }
+  
+   /**
    * Obtiene los colores de fondo y texto para una categoría específica.
    * Si la categoría no está mapeada, devuelve colores por defecto.
    * @param categoryName El nombre de la categoría.
    * @returns Un objeto con background y color, o undefined si no se encuentra.
    */
-  getCategoryColor(categoryName: string): { background: string, color: string } | undefined {
-      // Puedes normalizar el nombre de la categoría si la API devuelve inconsistencias (ej: "musica" vs "Música")
+   getCategoryColor(categoryName: string): { background: string, color: string } | undefined {
+     // Puedes normalizar el nombre de la categoría si la API devuelve inconsistencias (ej: "musica" vs "Música")
       const normalizedCategory = categoryName.trim(); // .toLowerCase() si quieres ignorar mayúsculas/minúsculas
-      return this.categoryColors[normalizedCategory];
+        return this.categoryColors[normalizedCategory];
   }
-
-
+  
+  
   // Opcional: Método para manejar el clic en la card y navegar
   // verDetallesEvento(id: number): void {
-  //   this.router.navigate(['/eventos/detalle', id]);
+  //  this.router.navigate(['/eventos/detalle', id]);
   // }
-}
+  
+  
+    aplicarFiltros() {
+      this.eventosFiltrados = this.eventos.filter(evento => {
+        const coincideCiudad = !this.filtroCiudad || evento.ciudad === this.filtroCiudad;
+        const coincideCategoria =
+        this.filtroCategoria.length === 0 ||
+        this.filtroCategoria.some(cat => evento.categorias.includes(cat));
+        const coincideFecha =
+        !this.filtroFecha || new Date(evento.fecha).toDateString() === this.filtroFecha.toDateString();
+  
+        return coincideCiudad && coincideCategoria && coincideFecha;
+      });
+   }
+  
+   resetFiltros() {
+    this.filtroCiudad = '';
+    this.filtroCategoria = [];
+    this.filtroFecha = null;
+    this.eventosFiltrados = [...this.eventos];
+   }
+  
+  
+  }
