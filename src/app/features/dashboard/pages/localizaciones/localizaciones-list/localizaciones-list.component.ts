@@ -10,12 +10,18 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTableDataSource } from '@angular/material/table';
-import Swal from 'sweetalert2';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { HttpClient } from '@angular/common/http';
-import { Categoria } from '../../../models/categoria.model';
+import Swal from 'sweetalert2';
+
+interface Localizacion {
+  id: number;
+  lugar: string;
+  enlaceGoogleMaps: string;
+}
 
 @Component({
-  selector: 'app-categorias-list',
+  selector: 'app-localizaciones-list',
   standalone: true,
   imports: [
     CommonModule,
@@ -27,15 +33,16 @@ import { Categoria } from '../../../models/categoria.model';
     MatSortModule,
     MatInputModule,
     FormsModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    MatPaginatorModule
   ],
   template: `
     <div class="container">
       <div class="header">
-        <h1>Gestión de Categorías</h1>
+        <h1>Gestión de Localizaciones</h1>
         <button mat-raised-button color="primary" routerLink="nueva">
           <mat-icon>add</mat-icon>
-          Nueva Categoría
+          Nueva Localización
         </button>
       </div>
 
@@ -48,23 +55,28 @@ import { Categoria } from '../../../models/categoria.model';
           </mat-form-field>
 
           <table mat-table [dataSource]="dataSource" matSort class="ngx-table">
-            <ng-container matColumnDef="nombre">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
-              <td mat-cell *matCellDef="let categoria">{{categoria.nombre}}</td>
+            <ng-container matColumnDef="lugar">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Lugar</th>
+              <td mat-cell *matCellDef="let localizacion">{{localizacion.lugar}}</td>
             </ng-container>
 
-            <ng-container matColumnDef="descripcion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
-              <td mat-cell *matCellDef="let categoria">{{categoria.descripcion}}</td>
+            <ng-container matColumnDef="enlaceGoogleMaps">
+              <th mat-header-cell *matHeaderCellDef>Enlace Google Maps</th>
+              <td mat-cell *matCellDef="let localizacion">
+                <a [href]="localizacion.enlaceGoogleMaps" target="_blank" class="maps-link">
+                  <mat-icon>map</mat-icon>
+                  Ver en Google Maps
+                </a>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
-              <td mat-cell *matCellDef="let categoria">
-                <button mat-icon-button color="primary" [routerLink]="['editar', categoria.id]">
+              <td mat-cell *matCellDef="let localizacion">
+                <button mat-icon-button color="primary" [routerLink]="['editar', localizacion.id]">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" (click)="eliminarCategoria(categoria)">
+                <button mat-icon-button color="warn" (click)="eliminarLocalizacion(localizacion)">
                   <mat-icon>delete</mat-icon>
                 </button>
               </td>
@@ -73,6 +85,8 @@ import { Categoria } from '../../../models/categoria.model';
             <tr mat-header-row *matHeaderRowDef="columnas"></tr>
             <tr mat-row *matRowDef="let row; columns: columnas;"></tr>
           </table>
+
+          <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
         </mat-card-content>
       </mat-card>
     </div>
@@ -128,43 +142,77 @@ import { Categoria } from '../../../models/categoria.model';
       width: 100%;
       margin-bottom: 24px;
     }
+
+    .maps-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1976d2;
+      text-decoration: none;
+    }
+
+    .maps-link:hover {
+      text-decoration: underline;
+    }
+
+    .maps-link mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   `]
 })
-export class CategoriasListComponent implements OnInit {
-  categorias: Categoria[] = [];
-  columnas = ['nombre', 'descripcion', 'acciones'];
+export class LocalizacionesListComponent implements OnInit {
+  localizaciones: Localizacion[] = [];
+  columnas = ['lugar', 'enlaceGoogleMaps', 'acciones'];
   filtro = '';
-  dataSource = new MatTableDataSource<Categoria>([]);
+  dataSource = new MatTableDataSource<Localizacion>([]);
+  loading = false;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
-    this.cargarCategorias();
+    this.cargarLocalizaciones();
   }
 
   ngAfterViewInit() {
     this.dataSource.sort = this.sort;
+    this.dataSource.paginator = this.paginator;
     this.sort.sort({
-      id: 'nombre',
+      id: 'lugar',
       start: 'asc',
       disableClear: false
     });
   }
 
-  cargarCategorias(): void {
-    this.http.get<Categoria[]>('http://localhost:8080/api/categorias').subscribe({
-      next: (categorias) => {
-        this.categorias = categorias;
-        this.dataSource = new MatTableDataSource(this.categorias);
-        this.dataSource.sort = this.sort;
-        this.dataSource.filterPredicate = (data: Categoria, filter: string) => {
-          return data.nombre.toLowerCase().includes(filter.toLowerCase());
-        };
+  cargarLocalizaciones(): void {
+    this.loading = true;
+    this.http.get<Localizacion[]>('http://localhost:8080/api/localizaciones').subscribe({
+      next: (localizaciones) => {
+        if (Array.isArray(localizaciones)) {
+          this.localizaciones = localizaciones;
+          this.dataSource = new MatTableDataSource<Localizacion>(localizaciones);
+          this.dataSource.sort = this.sort;
+          this.dataSource.paginator = this.paginator;
+          this.dataSource.filterPredicate = (data: Localizacion, filter: string) => {
+            const searchStr = filter.toLowerCase();
+            return data.lugar.toLowerCase().includes(searchStr) ||
+                   data.enlaceGoogleMaps.toLowerCase().includes(searchStr);
+          };
+        } else {
+          console.error('La respuesta no es un array:', localizaciones);
+          this.localizaciones = [];
+          this.dataSource = new MatTableDataSource<Localizacion>([]);
+        }
+        this.loading = false;
       },
       error: (error) => {
-        console.error('Error al cargar las categorías:', error);
-        Swal.fire('Error', 'No se pudieron cargar las categorías', 'error');
+        console.error('Error al cargar localizaciones:', error);
+        this.localizaciones = [];
+        this.dataSource = new MatTableDataSource<Localizacion>([]);
+        this.loading = false;
       }
     });
   }
@@ -173,10 +221,10 @@ export class CategoriasListComponent implements OnInit {
     this.dataSource.filter = this.filtro.trim().toLowerCase();
   }
 
-  eliminarCategoria(categoria: Categoria) {
+  eliminarLocalizacion(localizacion: Localizacion) {
     Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Deseas eliminar la categoría "${categoria.nombre}"?`,
+      text: `¿Deseas eliminar la localización "${localizacion.lugar}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -185,14 +233,14 @@ export class CategoriasListComponent implements OnInit {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.http.delete(`http://localhost:8080/api/categorias/${categoria.id}`).subscribe({
+        this.http.delete(`http://localhost:8080/api/localizaciones/${localizacion.id}`).subscribe({
           next: () => {
-            this.cargarCategorias();
-            Swal.fire('¡Eliminada!', 'La categoría ha sido eliminada correctamente.', 'success');
+            this.cargarLocalizaciones();
+            Swal.fire('¡Eliminada!', 'La localización ha sido eliminada correctamente.', 'success');
           },
           error: (error) => {
-            console.error('Error al eliminar la categoría:', error);
-            Swal.fire('Error', 'No se pudo eliminar la categoría', 'error');
+            console.error('Error al eliminar la localización:', error);
+            Swal.fire('Error', 'No se pudo eliminar la localización', 'error');
           }
         });
       }

@@ -62,12 +62,12 @@ import { EventosService, Evento } from '../../../../eventos/eventos.service';
 
             <ng-container matColumnDef="lugar">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Lugar</th>
-              <td mat-cell *matCellDef="let evento">{{evento.lugar}}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="ciudad">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Ciudad</th>
-              <td mat-cell *matCellDef="let evento">{{evento.ciudad}}</td>
+              <td mat-cell *matCellDef="let evento">
+                <div class="lugar-ciudad">
+                  <span class="lugar">{{evento.lugar}}</span>
+                  <span class="ciudad">{{evento.ciudad}}</span>
+                </div>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="categorias">
@@ -124,8 +124,8 @@ import { EventosService, Evento } from '../../../../eventos/eventos.service';
     }
 
     .ngx-table th.mat-header-cell {
-      background: #f7f9fc;
-      color: #1e2132;
+      background: #1976d2;
+      color: white;
       font-weight: 600;
       padding: 16px;
       border-bottom: 1px solid #edf1f7;
@@ -137,8 +137,12 @@ import { EventosService, Evento } from '../../../../eventos/eventos.service';
       color: #222b45;
     }
 
+    .ngx-table tr.mat-row:nth-child(even) {
+      background: #f0f4f8;
+    }
+
     .ngx-table tr.mat-row:hover {
-      background: #f7f9fc;
+      background: #e3f2fd;
     }
 
     mat-chip {
@@ -149,11 +153,26 @@ import { EventosService, Evento } from '../../../../eventos/eventos.service';
       width: 100%;
       margin-bottom: 24px;
     }
+
+    .lugar-ciudad {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .lugar-ciudad .lugar {
+      font-weight: 500;
+    }
+
+    .lugar-ciudad .ciudad {
+      color: #666;
+      font-size: 0.9em;
+    }
   `]
 })
 export class EventosListComponent implements OnInit {
   eventos: Evento[] = [];
-  columnas = ['titulo', 'fecha', 'lugar', 'ciudad', 'categorias', 'acciones'];
+  columnas = ['titulo', 'fecha', 'lugar', 'categorias', 'acciones'];
   filtro = '';
   dataSource = new MatTableDataSource<Evento>([]);
   @ViewChild(MatSort) sort!: MatSort;

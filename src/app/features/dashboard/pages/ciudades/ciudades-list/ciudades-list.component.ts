@@ -10,12 +10,16 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTableDataSource } from '@angular/material/table';
-import Swal from 'sweetalert2';
 import { HttpClient } from '@angular/common/http';
-import { Categoria } from '../../../models/categoria.model';
+import Swal from 'sweetalert2';
+
+interface Ciudad {
+  id: number;
+  nombre: string;
+}
 
 @Component({
-  selector: 'app-categorias-list',
+  selector: 'app-ciudades-list',
   standalone: true,
   imports: [
     CommonModule,
@@ -32,10 +36,10 @@ import { Categoria } from '../../../models/categoria.model';
   template: `
     <div class="container">
       <div class="header">
-        <h1>Gestión de Categorías</h1>
+        <h1>Gestión de Ciudades</h1>
         <button mat-raised-button color="primary" routerLink="nueva">
           <mat-icon>add</mat-icon>
-          Nueva Categoría
+          Nueva Ciudad
         </button>
       </div>
 
@@ -50,21 +54,16 @@ import { Categoria } from '../../../models/categoria.model';
           <table mat-table [dataSource]="dataSource" matSort class="ngx-table">
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
-              <td mat-cell *matCellDef="let categoria">{{categoria.nombre}}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="descripcion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
-              <td mat-cell *matCellDef="let categoria">{{categoria.descripcion}}</td>
+              <td mat-cell *matCellDef="let ciudad">{{ciudad.nombre}}</td>
             </ng-container>
 
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
-              <td mat-cell *matCellDef="let categoria">
-                <button mat-icon-button color="primary" [routerLink]="['editar', categoria.id]">
+              <td mat-cell *matCellDef="let ciudad">
+                <button mat-icon-button color="primary" [routerLink]="['editar', ciudad.id]">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" (click)="eliminarCategoria(categoria)">
+                <button mat-icon-button color="warn" (click)="eliminarCiudad(ciudad)">
                   <mat-icon>delete</mat-icon>
                 </button>
               </td>
@@ -130,17 +129,17 @@ import { Categoria } from '../../../models/categoria.model';
     }
   `]
 })
-export class CategoriasListComponent implements OnInit {
-  categorias: Categoria[] = [];
-  columnas = ['nombre', 'descripcion', 'acciones'];
+export class CiudadesListComponent implements OnInit {
+  ciudades: Ciudad[] = [];
+  columnas = ['nombre', 'acciones'];
   filtro = '';
-  dataSource = new MatTableDataSource<Categoria>([]);
+  dataSource = new MatTableDataSource<Ciudad>([]);
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
-    this.cargarCategorias();
+    this.cargarCiudades();
   }
 
   ngAfterViewInit() {
@@ -152,19 +151,19 @@ export class CategoriasListComponent implements OnInit {
     });
   }
 
-  cargarCategorias(): void {
-    this.http.get<Categoria[]>('http://localhost:8080/api/categorias').subscribe({
-      next: (categorias) => {
-        this.categorias = categorias;
-        this.dataSource = new MatTableDataSource(this.categorias);
+  cargarCiudades(): void {
+    this.http.get<Ciudad[]>('http://localhost:8080/api/ciudades').subscribe({
+      next: (ciudades) => {
+        this.ciudades = ciudades;
+        this.dataSource = new MatTableDataSource(this.ciudades);
         this.dataSource.sort = this.sort;
-        this.dataSource.filterPredicate = (data: Categoria, filter: string) => {
+        this.dataSource.filterPredicate = (data: Ciudad, filter: string) => {
           return data.nombre.toLowerCase().includes(filter.toLowerCase());
         };
       },
       error: (error) => {
-        console.error('Error al cargar las categorías:', error);
-        Swal.fire('Error', 'No se pudieron cargar las categorías', 'error');
+        console.error('Error al cargar las ciudades:', error);
+        Swal.fire('Error', 'No se pudieron cargar las ciudades', 'error');
       }
     });
   }
@@ -173,10 +172,10 @@ export class CategoriasListComponent implements OnInit {
     this.dataSource.filter = this.filtro.trim().toLowerCase();
   }
 
-  eliminarCategoria(categoria: Categoria) {
+  eliminarCiudad(ciudad: Ciudad) {
     Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Deseas eliminar la categoría "${categoria.nombre}"?`,
+      text: `¿Deseas eliminar la ciudad "${ciudad.nombre}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -185,14 +184,14 @@ export class CategoriasListComponent implements OnInit {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.http.delete(`http://localhost:8080/api/categorias/${categoria.id}`).subscribe({
+        this.http.delete(`http://localhost:8080/api/ciudades/${ciudad.id}`).subscribe({
           next: () => {
-            this.cargarCategorias();
-            Swal.fire('¡Eliminada!', 'La categoría ha sido eliminada correctamente.', 'success');
+            this.cargarCiudades();
+            Swal.fire('¡Eliminada!', 'La ciudad ha sido eliminada correctamente.', 'success');
           },
           error: (error) => {
-            console.error('Error al eliminar la categoría:', error);
-            Swal.fire('Error', 'No se pudo eliminar la categoría', 'error');
+            console.error('Error al eliminar la ciudad:', error);
+            Swal.fire('Error', 'No se pudo eliminar la ciudad', 'error');
           }
         });
       }
