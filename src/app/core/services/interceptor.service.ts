@@ -7,7 +7,7 @@ import {
   HttpErrorResponse
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
@@ -19,7 +19,7 @@ export class HttpInterceptorService implements HttpInterceptor {
   ) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     
     if (token) {
       request = request.clone({
@@ -30,11 +30,14 @@ export class HttpInterceptorService implements HttpInterceptor {
     }
 
     return next.handle(request).pipe(
-      catchError((error: HttpErrorResponse) => {
-        if (error.status === 401) {
-          this.authService.logout();
-          this.router.navigate(['/auth/login']);
+      tap({
+        error: (error: HttpErrorResponse) => {
+          if (error.status === 401) {
+            this.authService.logout();
+          }
         }
+      }),
+      catchError((error: HttpErrorResponse) => {
         return throwError(() => error);
       })
     );

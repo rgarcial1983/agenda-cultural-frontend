@@ -10,9 +10,30 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator, MatPaginatorModule, MatPaginatorIntl } from '@angular/material/paginator';
 import { MatChipsModule } from '@angular/material/chips';
 import Swal from 'sweetalert2';
 import { EventosService, Evento } from '../../../../eventos/eventos.service';
+
+// Clase personalizada para la traducción del paginador
+export class CustomMatPaginatorIntl extends MatPaginatorIntl {
+  override itemsPerPageLabel = 'Elementos por página:';
+  override nextPageLabel = 'Siguiente página';
+  override previousPageLabel = 'Página anterior';
+  override firstPageLabel = 'Primera página';
+  override lastPageLabel = 'Última página';
+  override getRangeLabel = (page: number, pageSize: number, length: number) => {
+    if (length === 0 || pageSize === 0) {
+      return `0 de ${length}`;
+    }
+    length = Math.max(length, 0);
+    const startIndex = page * pageSize;
+    const endIndex = startIndex < length ?
+      Math.min(startIndex + pageSize, length) :
+      startIndex + pageSize;
+    return `${startIndex + 1} - ${endIndex} de ${length}`;
+  };
+}
 
 @Component({
   selector: 'app-eventos-list',
@@ -28,9 +49,13 @@ import { EventosService, Evento } from '../../../../eventos/eventos.service';
     MatInputModule,
     FormsModule,
     MatFormFieldModule,
-    MatChipsModule
+    MatChipsModule,
+    MatPaginatorModule
   ],
-  providers: [EventosService],
+  providers: [
+    EventosService,
+    { provide: MatPaginatorIntl, useClass: CustomMatPaginatorIntl }
+  ],
   template: `
     <div class="container">
       <div class="header">
@@ -94,6 +119,7 @@ import { EventosService, Evento } from '../../../../eventos/eventos.service';
             <tr mat-header-row *matHeaderRowDef="columnas"></tr>
             <tr mat-row *matRowDef="let row; columns: columnas;"></tr>
           </table>
+          <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
         </mat-card-content>
       </mat-card>
     </div>
@@ -176,11 +202,17 @@ export class EventosListComponent implements OnInit {
   filtro = '';
   dataSource = new MatTableDataSource<Evento>([]);
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   constructor(private eventosService: EventosService) {}
 
   ngOnInit(): void {
     this.cargarEventos();
+  }
+
+  ngAfterViewInit() {
+    this.dataSource.sort = this.sort;
+    this.dataSource.paginator = this.paginator;
   }
 
   cargarEventos() {
@@ -193,8 +225,9 @@ export class EventosListComponent implements OnInit {
           ? e.categorias.map((cat: any) => typeof cat === 'string' ? cat : cat.nombre)
           : []
       }));
-      this.dataSource = new MatTableDataSource(this.eventos);
+      this.dataSource.data = this.eventos;
       this.dataSource.sort = this.sort;
+      this.dataSource.paginator = this.paginator;
       this.dataSource.filterPredicate = (data: any, filter: string) => {
         const dataStr = Object.values(data).reduce((acc: string, value: unknown) => {
           if (Array.isArray(value)) {

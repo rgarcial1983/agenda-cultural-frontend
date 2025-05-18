@@ -145,10 +145,12 @@ export class CategoriasListComponent implements OnInit {
 
   ngAfterViewInit() {
     this.dataSource.sort = this.sort;
-    this.sort.sort({
-      id: 'nombre',
-      start: 'asc',
-      disableClear: false
+    setTimeout(() => {
+      this.sort.sort({
+        id: 'nombre',
+        start: 'asc',
+        disableClear: false
+      });
     });
   }
 

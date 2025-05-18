@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { HttpClient } from '@angular/common/http';
+import { LocalizacionesService } from '../../../services/localizaciones.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -27,7 +27,7 @@ import Swal from 'sweetalert2';
     <div class="container">
       <div class="header">
         <h1>{{ esEdicion ? 'Editar' : 'Nueva' }} Localización</h1>
-        <button mat-button routerLink="/admin/localizaciones">
+        <button mat-button (click)="volver()">
           <mat-icon>arrow_back</mat-icon>
           Volver
         </button>
@@ -56,7 +56,7 @@ import Swal from 'sweetalert2';
             </mat-form-field>
 
             <div class="actions">
-              <button mat-button type="button" routerLink="/admin/localizaciones">Cancelar</button>
+              <button mat-button type="button" (click)="volver()">Cancelar</button>
               <button mat-raised-button color="primary" type="submit" [disabled]="localizacionForm.invalid">
                 {{ esEdicion ? 'Actualizar' : 'Crear' }}
               </button>
@@ -105,7 +105,7 @@ export class LocalizacionesFormComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,
+    private localizacionesService: LocalizacionesService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -125,8 +125,8 @@ export class LocalizacionesFormComponent implements OnInit {
   }
 
   cargarLocalizacion(id: number): void {
-    this.http.get(`http://localhost:8080/api/localizaciones/${id}`).subscribe({
-      next: (localizacion: any) => {
+    this.localizacionesService.getLocalizacion(id).subscribe({
+      next: (localizacion) => {
         this.localizacionForm.patchValue({
           lugar: localizacion.lugar,
           enlaceGoogleMaps: localizacion.enlaceGoogleMaps
@@ -135,7 +135,7 @@ export class LocalizacionesFormComponent implements OnInit {
       error: (error) => {
         console.error('Error al cargar la localización:', error);
         Swal.fire('Error', 'No se pudo cargar la localización', 'error');
-        this.router.navigate(['/admin/localizaciones']);
+        this.volver();
       }
     });
   }
@@ -145,10 +145,10 @@ export class LocalizacionesFormComponent implements OnInit {
       const localizacion = this.localizacionForm.value;
       
       if (this.esEdicion && this.localizacionId) {
-        this.http.put(`http://localhost:8080/api/localizaciones/${this.localizacionId}`, localizacion).subscribe({
+        this.localizacionesService.actualizarLocalizacion(this.localizacionId, localizacion).subscribe({
           next: () => {
             Swal.fire('¡Actualizada!', 'La localización ha sido actualizada correctamente.', 'success');
-            this.router.navigate(['/admin/localizaciones']);
+            this.volver();
           },
           error: (error) => {
             console.error('Error al actualizar la localización:', error);
@@ -156,10 +156,10 @@ export class LocalizacionesFormComponent implements OnInit {
           }
         });
       } else {
-        this.http.post('http://localhost:8080/api/localizaciones', localizacion).subscribe({
+        this.localizacionesService.crearLocalizacion(localizacion).subscribe({
           next: () => {
             Swal.fire('¡Creada!', 'La localización ha sido creada correctamente.', 'success');
-            this.router.navigate(['/admin/localizaciones']);
+            this.volver();
           },
           error: (error) => {
             console.error('Error al crear la localización:', error);
@@ -168,5 +168,9 @@ export class LocalizacionesFormComponent implements OnInit {
         });
       }
     }
+  }
+
+  volver(): void {
+    this.router.navigate(['../'], { relativeTo: this.route });
   }
 } 

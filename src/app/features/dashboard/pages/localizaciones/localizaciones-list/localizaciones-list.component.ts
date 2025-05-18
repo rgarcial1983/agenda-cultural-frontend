@@ -10,14 +10,28 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { HttpClient } from '@angular/common/http';
+import { MatPaginator, MatPaginatorModule, MatPaginatorIntl } from '@angular/material/paginator';
+import { LocalizacionesService, Localizacion } from '../../../services/localizaciones.service';
 import Swal from 'sweetalert2';
 
-interface Localizacion {
-  id: number;
-  lugar: string;
-  enlaceGoogleMaps: string;
+// Clase personalizada para la traducción del paginador
+export class CustomMatPaginatorIntl extends MatPaginatorIntl {
+  override itemsPerPageLabel = 'Elementos por página:';
+  override nextPageLabel = 'Siguiente página';
+  override previousPageLabel = 'Página anterior';
+  override firstPageLabel = 'Primera página';
+  override lastPageLabel = 'Última página';
+  override getRangeLabel = (page: number, pageSize: number, length: number) => {
+    if (length === 0 || pageSize === 0) {
+      return `0 de ${length}`;
+    }
+    length = Math.max(length, 0);
+    const startIndex = page * pageSize;
+    const endIndex = startIndex < length ?
+      Math.min(startIndex + pageSize, length) :
+      startIndex + pageSize;
+    return `${startIndex + 1} - ${endIndex} de ${length}`;
+  };
 }
 
 @Component({
@@ -35,6 +49,10 @@ interface Localizacion {
     FormsModule,
     MatFormFieldModule,
     MatPaginatorModule
+  ],
+  providers: [
+    LocalizacionesService,
+    { provide: MatPaginatorIntl, useClass: CustomMatPaginatorIntl }
   ],
   template: `
     <div class="container">
@@ -171,7 +189,7 @@ export class LocalizacionesListComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
-  constructor(private http: HttpClient) {}
+  constructor(private localizacionesService: LocalizacionesService) {}
 
   ngOnInit(): void {
     this.cargarLocalizaciones();
@@ -189,23 +207,17 @@ export class LocalizacionesListComponent implements OnInit {
 
   cargarLocalizaciones(): void {
     this.loading = true;
-    this.http.get<Localizacion[]>('http://localhost:8080/api/localizaciones').subscribe({
+    this.localizacionesService.getLocalizaciones().subscribe({
       next: (localizaciones) => {
-        if (Array.isArray(localizaciones)) {
-          this.localizaciones = localizaciones;
-          this.dataSource = new MatTableDataSource<Localizacion>(localizaciones);
-          this.dataSource.sort = this.sort;
-          this.dataSource.paginator = this.paginator;
-          this.dataSource.filterPredicate = (data: Localizacion, filter: string) => {
-            const searchStr = filter.toLowerCase();
-            return data.lugar.toLowerCase().includes(searchStr) ||
-                   data.enlaceGoogleMaps.toLowerCase().includes(searchStr);
-          };
-        } else {
-          console.error('La respuesta no es un array:', localizaciones);
-          this.localizaciones = [];
-          this.dataSource = new MatTableDataSource<Localizacion>([]);
-        }
+        this.localizaciones = localizaciones;
+        this.dataSource = new MatTableDataSource<Localizacion>(localizaciones);
+        this.dataSource.sort = this.sort;
+        this.dataSource.paginator = this.paginator;
+        this.dataSource.filterPredicate = (data: Localizacion, filter: string) => {
+          const searchStr = filter.toLowerCase();
+          return data.lugar.toLowerCase().includes(searchStr) ||
+                 data.enlaceGoogleMaps.toLowerCase().includes(searchStr);
+        };
         this.loading = false;
       },
       error: (error) => {
@@ -213,6 +225,7 @@ export class LocalizacionesListComponent implements OnInit {
         this.localizaciones = [];
         this.dataSource = new MatTableDataSource<Localizacion>([]);
         this.loading = false;
+        Swal.fire('Error', 'No se pudieron cargar las localizaciones', 'error');
       }
     });
   }
@@ -233,7 +246,7 @@ export class LocalizacionesListComponent implements OnInit {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.http.delete(`http://localhost:8080/api/localizaciones/${localizacion.id}`).subscribe({
+        this.localizacionesService.eliminarLocalizacion(localizacion.id).subscribe({
           next: () => {
             this.cargarLocalizaciones();
             Swal.fire('¡Eliminada!', 'La localización ha sido eliminada correctamente.', 'success');

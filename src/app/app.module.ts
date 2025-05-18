@@ -11,7 +11,6 @@ import { HttpInterceptorService } from './core/services/interceptor.service';
 
 @NgModule({
   declarations: [
-    AppComponent
   ],
   imports: [
     BrowserModule,
@@ -29,6 +28,6 @@ import { HttpInterceptorService } from './core/services/interceptor.service';
       multi: true
     }
   ],
-  bootstrap: [AppComponent]
+  bootstrap: []
 })
 export class AppModule { } 
